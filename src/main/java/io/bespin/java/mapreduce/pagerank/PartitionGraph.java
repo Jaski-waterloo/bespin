@@ -33,7 +33,7 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.SequenceFileOutputFormat;
-import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
+import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
@@ -127,7 +127,7 @@ public class PartitionGraph extends Configured implements Tool {
     FileOutputFormat.setOutputPath(job, new Path(outPath));
 
     job.setInputFormatClass(NonSplitableSequenceFileInputFormat.class);
-    job.setOutputFormatClass(FileOutputFormat.class);
+    job.setOutputFormatClass(TextOutputFormat.class);
 
     job.setMapOutputKeyClass(IntWritable.class);
     job.setMapOutputValueClass(PageRankNode.class);
