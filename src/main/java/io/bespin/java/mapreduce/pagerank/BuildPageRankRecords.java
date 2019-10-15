@@ -167,7 +167,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
     FileOutputFormat.setOutputPath(job, new Path(outputPath));
 
     job.setInputFormatClass(TextInputFormat.class);
-    job.setOutputFormatClass(TextOutputFormat.class);
+    job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
     job.setMapOutputKeyClass(IntWritable.class);
     job.setMapOutputValueClass(PageRankNode.class);
