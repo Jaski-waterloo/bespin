@@ -127,7 +127,7 @@ public class PartitionGraph extends Configured implements Tool {
     FileOutputFormat.setOutputPath(job, new Path(outPath));
 
     job.setInputFormatClass(NonSplitableSequenceFileInputFormat.class);
-    job.setOutputFormatClass(TextOutputFormat.class);
+    job.setOutputFormatClass(SequenceFileOutputFormat.class);
 
     job.setMapOutputKeyClass(IntWritable.class);
     job.setMapOutputValueClass(PageRankNode.class);
