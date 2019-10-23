@@ -62,6 +62,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
   private static class MyMapper extends Mapper<LongWritable, Text, IntWritable, PageRankNode> {
     private static final IntWritable nid = new IntWritable();
     private static final PageRankNode node = new PageRankNode();
+    private static ArrayList<Integer> intSources = new ArrayList<Integer>();
 
     @Override
     public void setup(Mapper<LongWritable, Text, IntWritable, PageRankNode>.Context context) {
@@ -69,13 +70,21 @@ public class BuildPageRankRecords extends Configured implements Tool {
       if (n == 0) {
         throw new RuntimeException(NODE_CNT_FIELD + " cannot be 0!");
       }
+      String[] sources = context.getConfiguration().getStrings("sources");
+      for(String source: sources) {
+        intSources.add(Integer.valueOf(source));
+      }
       node.setType(PageRankNode.Type.Complete);
-      node.setPageRank((float) -StrictMath.log10(10));
+      node.setPageRank((float) StrictMath.log(0));
     }
 
     @Override
     public void map(LongWritable key, Text t, Context context) throws IOException,
         InterruptedException {
+      for(int i=0; i<intSources.size())
+      {
+        if((int)key == intSources[i]) node.setPageRank((float) StrictMath.log(1));
+      }
       String[] arr = t.toString().trim().split("\\s+");
 
       nid.set(Integer.parseInt(arr[0]));
@@ -110,6 +119,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
   private static final String NUM_NODES = "numNodes";
+  private static final String SOURCES = "sources";
 
   /**
    * Runs this tool.
@@ -124,6 +134,8 @@ public class BuildPageRankRecords extends Configured implements Tool {
         .withDescription("output path").create(OUTPUT));
     options.addOption(OptionBuilder.withArgName("num").hasArg()
         .withDescription("number of nodes").create(NUM_NODES));
+    options.addOption(OptionBuilder.withArgName("sources").hasArg()
+        .withDescription("source nodes").create(SOURCES));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
