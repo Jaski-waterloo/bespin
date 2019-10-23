@@ -76,7 +76,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
         intSources.add(Integer.valueOf(source));
       }
       node.setType(PageRankNode.Type.Complete);
-      node.setPageRank((float) StrictMath.log(0));
+      node.setPageRank((float) 0);
     }
 
     @Override
@@ -101,7 +101,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
       }
       for(int i=0; i<intSources.size(); i++)
       {
-        if(node.getNodeId() == intSources.get(i)) node.setPageRank((float) StrictMath.log(1));
+        if(node.getNodeId() == intSources.get(i)) node.setPageRank((float) 1);
       }
 
       context.getCounter("graph", "numNodes").increment(1);
