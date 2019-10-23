@@ -81,7 +81,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
     @Override
     public void map(LongWritable key, Text t, Context context) throws IOException,
         InterruptedException {
-      for(int i=0; i<intSources.size())
+      for(int i=0; i<intSources.size(); i++)
       {
         if((int)key == intSources[i]) node.setPageRank((float) StrictMath.log(1));
       }
