@@ -81,10 +81,6 @@ public class BuildPageRankRecords extends Configured implements Tool {
     @Override
     public void map(LongWritable key, Text t, Context context) throws IOException,
         InterruptedException {
-      for(int i=0; i<intSources.size(); i++)
-      {
-        if((int)key == intSources[i]) node.setPageRank((float) StrictMath.log(1));
-      }
       String[] arr = t.toString().trim().split("\\s+");
 
       nid.set(Integer.parseInt(arr[0]));
@@ -101,6 +97,10 @@ public class BuildPageRankRecords extends Configured implements Tool {
         }
 
         node.setAdjacencyList(new ArrayListOfIntsWritable(neighbors));
+      }
+      for(int i=0; i<intSources.size(); i++)
+      {
+        if(node.getNodeId() == intSources.get(i)) node.setPageRank((float) StrictMath.log(1));
       }
 
       context.getCounter("graph", "numNodes").increment(1);
