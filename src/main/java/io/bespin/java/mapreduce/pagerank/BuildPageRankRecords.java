@@ -101,7 +101,15 @@ public class BuildPageRankRecords extends Configured implements Tool {
       }
       for(int i=0; i<intSources.size(); i++)
       {
-        if(node.getNodeId() == intSources.get(i)) node.setPageRank((float) 1);
+        if(node.getNodeId() == intSources.get(i))
+        {
+          node.setPageRank((float) 1);
+          break;
+        }
+        else
+        {
+          node.setPageRank((float) 0);
+        }
       }
 
       context.getCounter("graph", "numNodes").increment(1);
