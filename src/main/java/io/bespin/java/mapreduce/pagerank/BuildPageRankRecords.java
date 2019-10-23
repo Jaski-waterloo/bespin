@@ -160,6 +160,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
     String inputPath = cmdline.getOptionValue(INPUT);
     String outputPath = cmdline.getOptionValue(OUTPUT);
     int n = Integer.parseInt(cmdline.getOptionValue(NUM_NODES));
+    String sources = cmdline.getOptionValue(SOURCES);
 
     LOG.info("Tool name: " + BuildPageRankRecords.class.getSimpleName());
     LOG.info(" - inputDir: " + inputPath);
