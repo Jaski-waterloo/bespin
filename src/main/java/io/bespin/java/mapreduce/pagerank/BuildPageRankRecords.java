@@ -70,7 +70,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
         throw new RuntimeException(NODE_CNT_FIELD + " cannot be 0!");
       }
       node.setType(PageRankNode.Type.Complete);
-      node.setPageRank((float) -StrictMath.log(n));
+      node.setPageRank((float) -StrictMath.log10(10));
     }
 
     @Override
