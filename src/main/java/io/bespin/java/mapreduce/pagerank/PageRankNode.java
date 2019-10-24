@@ -18,6 +18,7 @@ package io.bespin.java.mapreduce.pagerank;
 
 import org.apache.hadoop.io.Writable;
 import tl.lin.data.array.ArrayListOfIntsWritable;
+import tl.lin.data.array.ArrayListOfFloatsWritable;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -50,7 +51,7 @@ public class PageRankNode implements Writable {
 
   private Type type;
   private int nodeid;
-  private float pagerank;
+  private ArrayListOfFloatsWritable pagerank;
   private ArrayListOfIntsWritable adjacencyList;
 
   public PageRankNode() {}
@@ -59,7 +60,7 @@ public class PageRankNode implements Writable {
     return pagerank;
   }
 
-  public void setPageRank(float p) {
+  public void setPageRank(ArrayListOfFloatsWritable p) {
     this.pagerank = p;
   }
 
@@ -101,11 +102,15 @@ public class PageRankNode implements Writable {
 
     if (type.equals(Type.Mass)) {
       pagerank = in.readFloat();
+      pagerank = new ArrayListOfFloatsWritable();
+      pageran.readFields(in);
       return;
     }
 
     if (type.equals(Type.Complete)) {
       pagerank = in.readFloat();
+      pagerank = new ArrayListOfFloatsWritable();
+      pagerank.readFields(in);
     }
 
     adjacencyList = new ArrayListOfIntsWritable();
