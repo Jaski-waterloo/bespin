@@ -41,6 +41,8 @@ import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import tl.lin.data.array.ArrayListOfIntsWritable;
+import tl.lin.data.array.ArrayListOfFloatsWritable;
+
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -99,6 +101,8 @@ public class BuildPageRankRecords extends Configured implements Tool {
 
         node.setAdjacencyList(new ArrayListOfIntsWritable(neighbors));
       }
+          
+          
       ArrayListOfFloatsWritable pageRanks = new ArrayListOfFloatsWritable();
       for(int i=0; i<intSources.size(); i++)
       {
