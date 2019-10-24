@@ -108,12 +108,12 @@ public class BuildPageRankRecords extends Configured implements Tool {
       {
         if(node.getNodeId() == intSources.get(i))
         {
-          pageRanks[i] = ((float) StrictMath.log(1));
+          pageRanks.add((float) StrictMath.log(1));
           break;
         }
         else
         {
-          pageRanks[i] = ((float) StrictMath.log(0));
+          pageRanks.add((float) StrictMath.log(0));
         }
       }
       node.setPageRank(pageRanks);
