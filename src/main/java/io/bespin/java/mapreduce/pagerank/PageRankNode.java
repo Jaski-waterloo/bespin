@@ -51,7 +51,8 @@ public class PageRankNode implements Writable {
 
   private Type type;
   private int nodeid;
-  private ArrayListOfFloatsWritable pagerank;
+  private Float pagerank;
+  private ArrayListOfFloatsWritable pageranks;
   private ArrayListOfIntsWritable adjacencyList;
 
   public PageRankNode() {}
@@ -59,8 +60,12 @@ public class PageRankNode implements Writable {
   public ArrayListOfFloatsWritable getPageRank() {
     return pagerank;
   }
+  
+  public void setPageRank(Float p){
+    this.pagerank = p;
+  }
 
-  public void setPageRank(ArrayListOfFloatsWritable p) {
+  public void setPageRanks(ArrayListOfFloatsWritable p) {
     this.pagerank = p;
   }
 
@@ -102,15 +107,15 @@ public class PageRankNode implements Writable {
 
     if (type.equals(Type.Mass)) {
       pagerank = in.readFloat();
-      pagerank = new ArrayListOfFloatsWritable();
-      pageran.readFields(in);
+      pageranks = new ArrayListOfFloatsWritable();
+      pageranks.readFields(in);
       return;
     }
 
     if (type.equals(Type.Complete)) {
       pagerank = in.readFloat();
-      pagerank = new ArrayListOfFloatsWritable();
-      pagerank.readFields(in);
+      pageranks = new ArrayListOfFloatsWritable();
+      pageranks.readFields(in);
     }
 
     adjacencyList = new ArrayListOfIntsWritable();
