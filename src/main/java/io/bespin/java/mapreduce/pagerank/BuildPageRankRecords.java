@@ -112,7 +112,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
           pageRanks[i] = ((float) StrictMath.log(0));
         }
       }
-      node.setPageRank(pageRanks)
+      node.setPageRank(pageRanks);
 
       context.getCounter("graph", "numNodes").increment(1);
       context.getCounter("graph", "numEdges").increment(arr.length - 1);
