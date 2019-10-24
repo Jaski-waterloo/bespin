@@ -57,7 +57,7 @@ import java.util.Set;
  * @author Jimmy Lin
  * @author Michael Schatz
  */
-public class BuildPersonalizedPageRankRecords extends Configured implements Tool {
+public class BuildPageRankRecords extends Configured implements Tool {
   private static final Logger LOG = Logger.getLogger(BuildPersonalizedPageRankRecords.class);
 
   private static final String NODE_CNT_FIELD = "node.cnt";
@@ -183,7 +183,7 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
     int n = Integer.parseInt(cmdline.getOptionValue(NUM_NODES));
     String sourceNodes = cmdline.getOptionValue(SOURCE_NODES);
 
-    LOG.info("Tool name: " + BuildPersonalizedPageRankRecords.class.getSimpleName());
+    LOG.info("Tool name: " + BuildPageRankRecords.class.getSimpleName());
     LOG.info(" - inputDir: " + inputPath);
     LOG.info(" - outputDir: " + outputPath);
     LOG.info(" - numNodes: " + n);
@@ -194,8 +194,8 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
     conf.setInt("mapred.min.split.size", 1024 * 1024 * 1024);
 
     Job job = Job.getInstance(conf);
-    job.setJobName(BuildPersonalizedPageRankRecords.class.getSimpleName() + ":" + inputPath);
-    job.setJarByClass(BuildPersonalizedPageRankRecords.class);
+    job.setJobName(BuildPageRankRecords.class.getSimpleName() + ":" + inputPath);
+    job.setJarByClass(BuildPageRankRecords.class);
 
     job.setNumReduceTasks(0);
     job.getConfiguration().setStrings("sourceNodes", sourceNodes);
@@ -226,6 +226,6 @@ public class BuildPersonalizedPageRankRecords extends Configured implements Tool
    * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
    */
   public static void main(String[] args) throws Exception {
-    ToolRunner.run(new BuildPersonalizedPageRankRecords(), args);
+    ToolRunner.run(new BuildPageRankRecords(), args);
   }
 }
