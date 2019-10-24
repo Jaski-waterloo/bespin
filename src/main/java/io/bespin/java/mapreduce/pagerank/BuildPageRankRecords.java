@@ -135,7 +135,7 @@ public class BuildPageRankRecords extends Configured implements Tool {
     }
   }
 
-  public BuildPersonalizedPageRankRecords() {}
+  public BuildPageRankRecords() {}
 
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
