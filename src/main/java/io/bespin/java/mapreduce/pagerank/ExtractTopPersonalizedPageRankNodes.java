@@ -81,7 +81,7 @@ public class ExtractTopPersonalizedPageRankNodes extends Configured implements T
         InterruptedException {
       for (int i = 0; i < sources.size(); i++) {
       	TopScoredObjects<Integer> q = queue.get(i);
-      	q.add(node.getNodeId(), node.getPageRank().get(i));
+      	q.add(node.getNodeId(), node.getPageRanks().get(i));
       	queue.set(i, q);
       }
     }
