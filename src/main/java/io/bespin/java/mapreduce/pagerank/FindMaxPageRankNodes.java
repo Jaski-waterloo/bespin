@@ -42,58 +42,93 @@ import org.apache.hadoop.util.ToolRunner;
 import org.apache.log4j.Logger;
 import tl.lin.data.pair.PairOfObjectFloat;
 import tl.lin.data.queue.TopScoredObjects;
+import tl.lin.data.pair.PairOfInts;
 
 import java.io.IOException;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.ArrayList;
 
-public class FindMaxPageRankNodes extends Configured implements Tool {
-  private static final Logger LOG = Logger.getLogger(FindMaxPageRankNodes.class);
+
+public class ExtractTopPersonalizedPageRankNodes extends Configured implements Tool {
+  private static final Logger LOG = Logger.getLogger(ExtractTopPersonalizedPageRankNodes.class);
+
+  private static final String SOURCE_NODES = "node.src";
 
   private static class MyMapper extends
-      Mapper<IntWritable, PageRankNode, IntWritable, FloatWritable> {
-    private TopScoredObjects<Integer> queue;
+      Mapper<IntWritable, PageRankNode, PairOfInts, FloatWritable> {
+    private ArrayList<TopScoredObjects<Integer>> queue;
+    private ArrayList<Integer> sources;
 
     @Override
     public void setup(Context context) throws IOException {
       int k = context.getConfiguration().getInt("n", 100);
-      queue = new TopScoredObjects<>(k);
+      String[] srcs = context.getConfiguration().getStrings(SOURCE_NODES, "");
+      sources = new ArrayList<Integer>();
+      for (String src : srcs) {
+        sources.add(Integer.valueOf(src));
+      }
+      queue = new ArrayList<TopScoredObjects<Integer>>();
+      for (int i = 0; i < sources.size(); i++) {
+      	queue.add(new TopScoredObjects<Integer>(k));
+      }
     }
 
     @Override
     public void map(IntWritable nid, PageRankNode node, Context context) throws IOException,
         InterruptedException {
-      queue.add(node.getNodeId(), node.getPageRank());
+      for (int i = 0; i < sources.size(); i++) {
+      	TopScoredObjects<Integer> q = queue.get(i);
+      	q.add(node.getNodeId(), node.getPageRank().get(i));
+      	queue.set(i, q);
+      }
     }
 
     @Override
     public void cleanup(Context context) throws IOException, InterruptedException {
-      IntWritable key = new IntWritable();
+      PairOfInts key = new PairOfInts();
       FloatWritable value = new FloatWritable();
 
-      for (PairOfObjectFloat<Integer> pair : queue.extractAll()) {
-        key.set(pair.getLeftElement());
-        value.set(pair.getRightElement());
-        context.write(key, value);
+      int i = 0;
+      for (TopScoredObjects<Integer> q : queue) {
+      	for (PairOfObjectFloat<Integer> pair : q.extractAll()) {
+          key.set(i, pair.getLeftElement());
+          value.set(pair.getRightElement());
+          context.write(key, value);
+        }
+        i++;
       }
     }
   }
 
   private static class MyReducer extends
-      Reducer<IntWritable, FloatWritable, IntWritable, Text> {
-    private static TopScoredObjects<Integer> queue;
+      Reducer<PairOfInts, FloatWritable, Text, Text> {
+    private ArrayList<TopScoredObjects<Integer>> queue;
+    private ArrayList<Integer> sources;
 
     @Override
     public void setup(Context context) throws IOException {
       int k = context.getConfiguration().getInt("n", 100);
-      queue = new TopScoredObjects<Integer>(k);
+      String[] srcs = context.getConfiguration().getStrings(SOURCE_NODES, "");
+      sources = new ArrayList<Integer>();
+      for (String src : srcs) {
+        sources.add(Integer.valueOf(src));
+      }
+      queue = new ArrayList<TopScoredObjects<Integer>>();
+      for (int i = 0; i < sources.size(); i++) {
+      	queue.add(new TopScoredObjects<Integer>(k));
+      }
     }
 
     @Override
-    public void reduce(IntWritable nid, Iterable<FloatWritable> iterable, Context context)
+    public void reduce(PairOfInts nid, Iterable<FloatWritable> iterable, Context context)
         throws IOException {
       Iterator<FloatWritable> iter = iterable.iterator();
-      queue.add(nid.get(), iter.next().get());
+      TopScoredObjects<Integer> q = queue.get(nid.getLeftElement());
+      q.add((int)nid.getRightElement(), iter.next().get());
+      queue.set(nid.getLeftElement(), q);
 
       // Shouldn't happen. Throw an exception.
       if (iter.hasNext()) {
@@ -104,23 +139,31 @@ public class FindMaxPageRankNodes extends Configured implements Tool {
     @Override
     public void cleanup(Context context) throws IOException, InterruptedException {
       IntWritable key = new IntWritable();
-      Text value = new Text();
+      FloatWritable value = new FloatWritable();
 
-      for (PairOfObjectFloat<Integer> pair : queue.extractAll()) {
-        key.set(pair.getLeftElement());
-        // We're outputting a string so we can control the formatting.
-        value.set(String.format("%.5f", pair.getRightElement()));
-        context.write(key, value);
+      int i = 0;
+      for (TopScoredObjects<Integer> q : queue) {
+      	context.write(new Text("Source: " + sources.get(i)), new Text(""));
+      	for (PairOfObjectFloat<Integer> pair : q.extractAll()) {
+          key.set(pair.getLeftElement());
+          value.set((float)StrictMath.exp(pair.getRightElement()));
+          context.write(new Text(String.format("%.5f", value.get())), new Text(String.valueOf(key)));
+        }
+        if (i < queue.size() - 1) {
+          context.write(new Text(""), new Text(""));
+      	}
+        i++;
       }
     }
   }
 
-  public FindMaxPageRankNodes() {
+  public ExtractTopPersonalizedPageRankNodes() {
   }
 
   private static final String INPUT = "input";
   private static final String OUTPUT = "output";
   private static final String TOP = "top";
+  private static final String SOURCES = "sources";
 
   /**
    * Runs this tool.
@@ -135,6 +178,8 @@ public class FindMaxPageRankNodes extends Configured implements Tool {
         .withDescription("output path").create(OUTPUT));
     options.addOption(OptionBuilder.withArgName("num").hasArg()
         .withDescription("top n").create(TOP));
+    options.addOption(OptionBuilder.withArgName("sources").hasArg()
+    	.withDescription("sources").create(SOURCES));
 
     CommandLine cmdline;
     CommandLineParser parser = new GnuParser();
@@ -146,7 +191,8 @@ public class FindMaxPageRankNodes extends Configured implements Tool {
       return -1;
     }
 
-    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || !cmdline.hasOption(TOP)) {
+    if (!cmdline.hasOption(INPUT) || !cmdline.hasOption(OUTPUT) || 
+    	!cmdline.hasOption(TOP) || !cmdline.hasOption(SOURCES)) {
       System.out.println("args: " + Arrays.toString(args));
       HelpFormatter formatter = new HelpFormatter();
       formatter.setWidth(120);
@@ -158,19 +204,22 @@ public class FindMaxPageRankNodes extends Configured implements Tool {
     String inputPath = cmdline.getOptionValue(INPUT);
     String outputPath = cmdline.getOptionValue(OUTPUT);
     int n = Integer.parseInt(cmdline.getOptionValue(TOP));
+    String sourcesStr = cmdline.getOptionValue(SOURCES);
 
-    LOG.info("Tool name: " + FindMaxPageRankNodes.class.getSimpleName());
+    LOG.info("Tool name: " + ExtractTopPersonalizedPageRankNodes.class.getSimpleName());
     LOG.info(" - input: " + inputPath);
     LOG.info(" - output: " + outputPath);
     LOG.info(" - top: " + n);
+    LOG.info(" - sources: " + sourcesStr);
 
     Configuration conf = getConf();
     conf.setInt("mapred.min.split.size", 1024 * 1024 * 1024);
     conf.setInt("n", n);
+    conf.setStrings(SOURCE_NODES, sourcesStr);
 
     Job job = Job.getInstance(conf);
-    job.setJobName(FindMaxPageRankNodes.class.getName() + ":" + inputPath);
-    job.setJarByClass(FindMaxPageRankNodes.class);
+    job.setJobName(ExtractTopPersonalizedPageRankNodes.class.getName() + ":" + inputPath);
+    job.setJarByClass(ExtractTopPersonalizedPageRankNodes.class);
 
     job.setNumReduceTasks(1);
 
@@ -180,10 +229,10 @@ public class FindMaxPageRankNodes extends Configured implements Tool {
     job.setInputFormatClass(SequenceFileInputFormat.class);
     job.setOutputFormatClass(TextOutputFormat.class);
 
-    job.setMapOutputKeyClass(IntWritable.class);
+    job.setMapOutputKeyClass(PairOfInts.class);
     job.setMapOutputValueClass(FloatWritable.class);
 
-    job.setOutputKeyClass(IntWritable.class);
+    job.setOutputKeyClass(Text.class);
     job.setOutputValueClass(Text.class);
     // Text instead of FloatWritable so we can control formatting
 
@@ -195,17 +244,28 @@ public class FindMaxPageRankNodes extends Configured implements Tool {
 
     job.waitForCompletion(true);
 
+    Path path = new Path(outputPath + "/part-r-00000");
+	FileSystem fs = FileSystem.get(conf);
+	BufferedReader br = new BufferedReader(new InputStreamReader(fs.open(path)));
+	try {
+	  String line;
+	  line = br.readLine();
+	  while (line != null){
+	    System.out.println(line);
+	    line = br.readLine();
+	  }
+	} finally {
+	  br.close();
+	}
+
     return 0;
   }
 
   /**
    * Dispatches command-line arguments to the tool via the {@code ToolRunner}.
-   *
-   * @param args command-line arguments
-   * @throws Exception if tool encounters an exception
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(new FindMaxPageRankNodes(), args);
+    int res = ToolRunner.run(new ExtractTopPersonalizedPageRankNodes(), args);
     System.exit(res);
   }
 }
