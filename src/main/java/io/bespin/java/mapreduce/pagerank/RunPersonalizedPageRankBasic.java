@@ -82,11 +82,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
     nodes, edges, massMessages, massMessagesSaved, massMessagesReceived, missingStructure
   };
 
-  /**
-   * 
-   * @author nguyentd4
-   * 
-   */
+ 
   // Mapper, no in-mapper combining.
   private static class MapClass extends
       Mapper<IntWritable, PageRankNode, IntWritable, PageRankNode> {
@@ -103,8 +99,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
     @Override
     public void setup(Mapper<IntWritable, PageRankNode, IntWritable, PageRankNode>.Context context) {
-      // I think hadoop already configs this to be comma separated
-      String inputSources[] = context.getConfiguration().getStrings("MultiSources");
+      String inputSources[] = context.getConfiguration().getStrings("SourcesList");
       sourcesize = inputSources.length;
     }
 
@@ -122,17 +117,12 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
       // Distribute PageRank mass to neighbors (along outgoing edges).
       if (node.getAdjacenyList().size() > 0) {
-        // afw.clear();
         ArrayListOfFloatsWritable mass = new ArrayListOfFloatsWritable();
-        // ArrayListOfFloatsWritable tmpAFW = new ArrayListOfFloatsWritable();
         // Each neighbor gets an equal share of PageRank mass.
         ArrayListOfIntsWritable list = node.getAdjacenyList();
-        // float[] mass = new float[sourcesize];
-        // float[] currentPRs = node.getPageRanks().getArray();
         context.getCounter(PageRank.edges).increment(list.size());
         for (int t = 0; t < sourcesize; t++) {
           mass.add(node.getPageRanks().get(t) - (float) StrictMath.log(list.size()));
-          // tmpAFW.add(Float.NEGATIVE_INFINITY);// init this tmp
         }
 
         // Iterate over neighbors.
@@ -158,30 +148,17 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
   private static class MapWithInMapperCombiningClass extends
       Mapper<IntWritable, PageRankNode, IntWritable, PageRankNode> {
     // For buffering PageRank mass contributes keyed by destination node.
-    // private static HMapIF[] map=null;
     private static final HashMap<Integer, ArrayListOfFloatsWritable> map = new HashMap<Integer, ArrayListOfFloatsWritable>();
     // For passing along node structure.
     private static final PageRankNode intermediateStructure = new PageRankNode();
-    // private static final ArrayListWritable<IntWritable> multiSources = new
-    // ArrayListWritable<IntWritable>();
     private static int sourcesize = 0;
-
-    // private static final ArrayListOfFloatsWritable afw = new ArrayListOfFloatsWritable();
-
-    // private static float[] afw = null;
 
     @Override
     public void setup(Mapper<IntWritable, PageRankNode, IntWritable, PageRankNode>.Context context) {
       // I think hadoop already configs this to be comma separated
-      String inputSources[] = context.getConfiguration().getStrings("MultiSources");
+      String inputSources[] = context.getConfiguration().getStrings("SourcesList");
       sourcesize = inputSources.length;
-
-      // for (int i = 0; i < inputSources.length; i++) {
-      // multiSources.add(new IntWritable(Integer.parseInt(inputSources[i])));
-      // }
-      // afw = new float[sourcesize];
-      // //init map
-      // map =new HMapIF[sourcesize];
+      
     }
 
     @Override
@@ -199,17 +176,14 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
       // Distribute PageRank mass to neighbors (along outgoing edges).
       if (node.getAdjacenyList().size() > 0) {
-        // afw.clear();
-        ArrayListOfFloatsWritable afw = new ArrayListOfFloatsWritable();
-        ArrayListOfFloatsWritable tmpAFW = new ArrayListOfFloatsWritable();
+        ArrayListOfFloatsWritable MyList = new ArrayListOfFloatsWritable();
+        ArrayListOfFloatsWritable tempList = new ArrayListOfFloatsWritable();
         // Each neighbor gets an equal share of PageRank mass.
         ArrayListOfIntsWritable list = node.getAdjacenyList();
-        // float[] mass = new float[sourcesize];
-        // float[] currentPRs = node.getPageRanks().getArray();
         context.getCounter(PageRank.edges).increment(list.size());
         for (int t = 0; t < sourcesize; t++) {
-          afw.add(node.getPageRanks().get(t) - (float) StrictMath.log(list.size()));
-          tmpAFW.add(Float.NEGATIVE_INFINITY);// init this tmp
+          MyList.add(node.getPageRanks().get(t) - (float) StrictMath.log(list.size()));
+          tempList.add(Float.NEGATIVE_INFINITY);// initializing
         }
 
         // Iterate over neighbors.
@@ -221,14 +195,14 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
             massMessagesSaved++;
 
             for (int t = 0; t < sourcesize; t++) {
-              tmpAFW.set(t, sumLogProbs(map.get(neighbor).get(t), afw.get(t)));
+              tempList.set(t, sumLogProbs(map.get(neighbor).get(t), MyList.get(t)));
             }
 
-            map.put(neighbor, tmpAFW);
+            map.put(neighbor, tempList);
           } else {
             // New destination node; add new entry in map.
             massMessages++;
-            map.put(neighbor, afw);
+            map.put(neighbor, MyList);
           }
         }
       }
@@ -266,7 +240,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
     @Override
     public void setup(Reducer<IntWritable, PageRankNode, IntWritable, PageRankNode>.Context context) {
       // I think hadoop already configs this to be comma separated
-      String inputSources[] = context.getConfiguration().getStrings("MultiSources");
+      String inputSources[] = context.getConfiguration().getStrings("SourcesList");
       sourcesize = inputSources.length;
 
     }
@@ -319,7 +293,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
     @Override
     public void setup(Reducer<IntWritable, PageRankNode, IntWritable, PageRankNode>.Context context) {
       // I think hadoop already configs this to be comma separated
-      String inputSources[] = context.getConfiguration().getStrings("MultiSources");
+      String inputSources[] = context.getConfiguration().getStrings("SourcesList");
       sourcesize = inputSources.length;
       for (int t = 0; t < sourcesize; t++) {
         totalMass.add(Float.NEGATIVE_INFINITY);
@@ -406,7 +380,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
       // Write to a file the amount of PageRank mass we've seen in this reducer.
       FileSystem fs = FileSystem.get(context.getConfiguration());
       FSDataOutputStream out = fs.create(new Path(path + "/" + taskId), false);
-      for (int t = 0; t < sourcesize; t++) {// make sure if this works
+      for (int t = 0; t < sourcesize; t++) {
         out.writeFloat(totalMass.get(t));
       }
       out.close();
@@ -419,27 +393,21 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
       Mapper<IntWritable, PageRankNode, IntWritable, PageRankNode> {
     private ArrayListOfFloatsWritable missingMass = new ArrayListOfFloatsWritable();
     private int sourcesize = 0;
-    // private int singleSrc = -1;
-    // private static final ArrayListWritable<IntWritable> multiSources = new
-    // ArrayListWritable<IntWritable>();
-    private static int[] multiSources = null;
+    private static int[] sourcesList = null;
     private int nodeCnt = 0;
 
     @Override
     public void setup(Context context) throws IOException {
       Configuration conf = context.getConfiguration();
-      // singleSrc = conf.getInt("SingleSource", 0);
-      String inputSources[] = context.getConfiguration().getStrings("MultiSources");
+      String inputSources[] = context.getConfiguration().getStrings("SourcesList");
       String mMasses[] = context.getConfiguration().getStrings("MissingMass");// this is missing
                                                                               // masses
       sourcesize = inputSources.length;
-      multiSources = new int[sourcesize];
+      sourcesList = new int[sourcesize];
       for (int t = 0; t < sourcesize; t++) {
         missingMass.add(Float.parseFloat(mMasses[t]));// /init
-        // multiSources.add(new IntWritable(Integer.parseInt(inputSources[t])));
-        multiSources[t] = Integer.parseInt(inputSources[t]);
+        sourcesList[t] = Integer.parseInt(inputSources[t]);
       }
-      // missingMass = conf.getFloat("MissingMass", 0.0f);
       nodeCnt = conf.getInt("NodeCount", 0);
     }
 
@@ -450,7 +418,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
       // if single source, add all mass
       for (int t = 0; t < sourcesize; t++) {
-        if (nid.get() == multiSources[t]) {
+        if (nid.get() == sourcesList[t]) {
           float jump = (float) (Math.log(ALPHA));
           float link = (float) Math.log(1.0f - ALPHA)
               + sumLogProbs(p.get(t), (float) (Math.log(missingMass.get(t))));
@@ -595,16 +563,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
     phase2(i, j, missingMasses.toString(), basePath, numNodes, sources);
   }
 
-  /**
-   * 
-   * @param i
-   * @param j
-   * @param basePath
-   * @param numNodes
-   * @param ssize
-   * @return
-   * @throws Exception
-   */
+  
   private ArrayListOfFloatsWritable phase1(int i, int j, String basePath, int numNodes, int ssize,
       String sources) throws Exception {
     Job job = Job.getInstance(getConf());
@@ -635,7 +594,7 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
     job.getConfiguration().setInt("NodeCount", numNodes);
     // set multi sources
-    job.getConfiguration().setStrings("MultiSources", sources);
+    job.getConfiguration().setStrings("SourcesList", sources);
     job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
     job.getConfiguration().setBoolean("mapred.reduce.tasks.speculative.execution", false);
     // job.getConfiguration().set("mapred.child.java.opts", "-Xmx2048m");
@@ -689,16 +648,8 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
     return mass;
   }
 
-  /**
-   * 
-   * @param i
-   * @param j
-   * @param missingMasses
-   * @param basePath
-   * @param numNodes
-   * @param sources
-   * @throws Exception
-   */
+
+  
   private void phase2(int i, int j, String missingMasses, String basePath, int numNodes,
       String sources) throws Exception {
     Job job = Job.getInstance(getConf());
@@ -717,9 +668,9 @@ public class RunPersonalizedPageRankBasic extends Configured implements Tool {
 
     job.getConfiguration().setBoolean("mapred.map.tasks.speculative.execution", false);
     job.getConfiguration().setBoolean("mapred.reduce.tasks.speculative.execution", false);
-    job.getConfiguration().setStrings("MissingMass", missingMasses);// /////set as string
+    job.getConfiguration().setStrings("MissingMass", missingMasses);//set as string
     // set multi sources
-    job.getConfiguration().setStrings("MultiSources", sources);
+    job.getConfiguration().setStrings("SourcesList", sources);
 
     job.getConfiguration().setInt("NodeCount", numNodes);
 
